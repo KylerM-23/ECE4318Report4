@@ -19,9 +19,9 @@ from mimetypes import guess_type as guess_mime_type
 # Request all access (permission to read/send/receive emails, manage the inbox, and more)
 SCOPES = ['https://mail.google.com/']
 our_email = 'bobthebuilder420@gmail.com'
-#working directory; depends on your local computer
-working_directory=r'C:\Users\lyndo\Downloads\ECE4318\gmail_api'
-os.chdir(working_directory)
+working_directory = '.'#; depends on your local computer
+#working_directory=r'C:\Users\lyndo\Downloads\ECE4318\gmail_api'
+#os.chdir(working_directory)
 
 def gmail_authenticate():
     creds = None
