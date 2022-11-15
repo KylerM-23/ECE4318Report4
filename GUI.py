@@ -1,6 +1,15 @@
 import tkinter as tk
 from email_class import email_handler
 
+'''
+{
+    from: 'email', 
+    subj:   ''
+    body: ''
+    time: DateTime obj
+}
+'''
+
 class emailGUI(tk.Frame):
     gmail = email_handler()
     widgets = []
