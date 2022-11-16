@@ -47,6 +47,13 @@ service = gmail_authenticate()
 
 # Adds the attachment with the given filename to the given message
 def add_attachment(message, filename):
+    '''
+    Adds attachments to email (called in build_message())
+    
+    Args:
+        message (instance of MIMEText or MIMEMultipart) 
+        attachments (list of string): email attachments; example: ['pic.png', 'text.txt', 'docum.pdf']
+    '''
     content_type, encoding = guess_mime_type(filename)
     if content_type is None or encoding is not None:
         content_type = 'application/octet-stream'
@@ -72,15 +79,31 @@ def add_attachment(message, filename):
     msg.add_header('Content-Disposition', 'attachment', filename=filename)
     message.attach(msg)
 
-def build_message(destination, obj, body, attachments=[]):
+def build_message(destination, cc, bcc, obj, body, attachments=[]):
+    '''
+    Build and encode the email message (called in send_message())
+    
+    Args:
+        destination (string of email address list): email address being send to; examples: "CEOofMcDonald@gmail.com" or "mushroom@gmail.com,market@gmail.com,mochi@gmail.com"
+        cc (string of email address list): example: "mushroom@gmail.com,market@gmail.com,mochi@gmail.com"
+        bcc (string of email address list): example: "mushroom@gmail.com,market@gmail.com,mochi@gmail.com"
+        obj (string): the subject/title of the email
+        body (string): the body/main content of the email
+        attachments (list of string): email attachments; example: ['pic.png', 'text.txt', 'docum.pdf']
+    '''
+    #for cc/bcc https://stackoverflow.com/questions/37201250/sending-email-via-gmail-python
     if not attachments: # no attachments given
         message = MIMEText(body)
         message['to'] = destination
+        message['cc'] = cc
+        message['bcc'] = bcc
         message['from'] = our_email
         message['subject'] = obj
     else:
         message = MIMEMultipart()
         message['to'] = destination
+        message['cc'] = cc
+        message['bcc'] = bcc
         message['from'] = our_email
         message['subject'] = obj
         message.attach(MIMEText(body))
@@ -88,13 +111,33 @@ def build_message(destination, obj, body, attachments=[]):
             add_attachment(message, working_directory+"\\"+filename)
     return {'raw': urlsafe_b64encode(message.as_bytes()).decode()}
 
-def send_message(service, destination, obj, body, attachments=[]):
+def send_message(service, destination, cc, bcc, obj, body, attachments=[]):
+    '''
+    Build and send email message
+    
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+        destination (string): email address being send to
+        cc (string of email address list): example: "mushroom@gmail.com,market@gmail.com,mochi@gmail.com"
+        bcc (string of email address list): example: "mushroom@gmail.com,market@gmail.com,mochi@gmail.com"
+        obj (string): the subject/title of the email
+        body (string): the body/main content of the email
+        attachments (list of string): email attachments; example: ['pic.png', 'text.txt', 'docum.pdf']
+    '''
     return service.users().messages().send(
       userId="me",
-      body=build_message(destination, obj, body, attachments)
+      body=build_message(destination, cc, bcc, obj, body, attachments)
     ).execute()
 
 def search_messages(service, query):
+    '''
+    Search email messages (widely called because of usefulness)
+    returns list of message-related objects; each objects matched the search query
+    
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+        query (string): search query; the thing you type in a search bar
+    '''
     result = service.users().messages().list(userId='me',q=query).execute()
     messages = [ ]
     if 'messages' in result:
@@ -109,7 +152,7 @@ def search_messages(service, query):
 # utility functions
 def get_size_format(b, factor=1024, suffix="B"):
     """
-    Scale bytes to its proper byte format
+    Scale bytes to its proper byte format (called in parse_parts())
     e.g:
         1253656 => '1.20MB'
         1253656678 => '1.17GB'
@@ -120,11 +163,22 @@ def get_size_format(b, factor=1024, suffix="B"):
         b /= factor
     return f"{b:.2f}Y{suffix}"
 def clean(text):
-    # clean text for creating a folder
+    '''
+    clean text (no spaces/special characters) for creating a folder (called in read_message(), which creates folders when reading emails)
+    
+    Args:
+        text (path)
+    '''
     return "".join(c if c.isalnum() else "_" for c in text)
 def parse_parts(service, parts, folder_name, message):
     """
-    Utility function that parses the content of an email partition
+    Parses the content of an email partition and save any HTML files into folders (called in read_message())
+    
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+        parts: comes from 'parts = payload.get("parts")' in read_message()
+        folder_name (path of folder_name)
+        message: an input to read_message(), input was generated by search_messages()
     """
     if parts:
         for part in parts:
@@ -179,6 +233,10 @@ def read_message(service, message):
         - Creates a folder for each email based on the subject
         - Downloads text/html content (if available) and saves it under the folder created as index.html
         - Downloads any file that is attached to the email and saves it in the folder created
+        
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+        message: comes from search_messages(); search_messages() may return multiple messages, so for-loop may be needed to read each message 1-by-1
     """
     msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
     # parts can be the message body, or attachments
@@ -228,6 +286,13 @@ def read_message(service, message):
     print("="*50)
 
 def mark_as_read(service, query):
+    '''
+    Search for and mark email messages as read
+    
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+        query (string): search query; the thing you type in a search bar
+    '''
     messages_to_mark = search_messages(service, query)
     print(f"Matched emails: {len(messages_to_mark)}")
     return service.users().messages().batchModify(
@@ -239,6 +304,13 @@ def mark_as_read(service, query):
     ).execute()
 
 def mark_as_unread(service, query):
+    '''
+    Search for and mark email messages as unread
+    
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+        query (string): search query; the thing you type in a search bar
+    '''
     messages_to_mark = search_messages(service, query)
     print(f"Matched emails: {len(messages_to_mark)}")
     # add the label UNREAD to each of the search results
@@ -251,6 +323,13 @@ def mark_as_unread(service, query):
     ).execute()
 
 def delete_messages(service, query):
+    '''
+    Search for and delete email messages
+    
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+        query (string): search query; the thing you type in a search bar
+    '''
     messages_to_delete = search_messages(service, query)
     # it's possible to delete a single message with the delete API, like this:
     # service.users().messages().delete(userId='me', id=msg['id'])
@@ -282,16 +361,21 @@ if __name__ == "__main__":
             our_email = email_source
 
         elif user_choice == '1':
-            email_destination = input('What is the email address you are sending an email to?\n')
+            email_destination = input('What are the email addresses you are sending an email to (format like: mushroom@gmail.com,market@gmail.com,mochi@gmail.com)?\n')
+            email_cc = input('What are the email addresses you are CCing to (format like: mushroom@gmail.com,market@gmail.com,mochi@gmail.com)?\n')
+            email_bcc = input('What are the email addresses you are BCCing to (format like: mushroom@gmail.com,market@gmail.com,mochi@gmail.com)?\n')
             email_subject = input('What is the subject of this email?\n')
             email_body = input('What is the body of this email?\n')
             email_attachments = [] #attached files must be in the working directory
-            while attachment != None:
+            attachment = ''
+            while attachment.lower() != "none":
                 attachment = input('Enter one-by-one, what are the file name of the attachment to this email (type "None" to stop adding attachments)?\n')
-                if attachment != None:
+                if attachment.lower() != "none":
                     email_attachments.append(attachment)
             send_message(service=service, 
                          destination=email_destination,
+                         cc=email_cc,
+                         bcc=email_bcc,
                          obj=email_subject, #subject; objective
                          body=email_body,
                          attachments=email_attachments
