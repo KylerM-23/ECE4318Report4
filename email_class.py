@@ -25,7 +25,7 @@ class email_handler:
     
     def __init__(self):
         self.service = self.gmail_authenticate() #get the Gmail API service
-        self.email = self.service.users().getProfile(userId = 'me').execute()['emailAddress']
+        self.myemail = self.service.users().getProfile(userId = 'me').execute()['emailAddress']
         
     def gmail_authenticate(self):
         creds = None
@@ -48,17 +48,56 @@ class email_handler:
         service = build('gmail', 'v1', credentials=creds)
         return service
 
-    def send_message(self, message_dict):
+    def createEmailMessage(self, message_dict):
         message = MIMEText(message_dict['body'])
         message['to'] = message_dict['to']
-        message['from'] = self.email
+        message['from'] = self.myemail
         message['subject'] = message_dict['subject']
-        raw_message = {'raw': urlsafe_b64encode(message.as_bytes()).decode()}
+        message['cc'] = message_dict['cc']
+        message['bcc'] = message_dict['bcc']
+        raw_message = {'raw': urlsafe_b64encode(message.as_bytes()).decode()} #encode message
+        return raw_message
+    
+    def send_message(self, message_dict):
+        self.service.users().messages().send(userId="me",
+        body= self.createEmailMessage(message_dict)).execute()
         
-        return self.service.users().messages().send(
-          userId="me",
-          body= raw_message
-        ).execute()
+    def getMessages(self, labels = ['INBOX'], amount = 10):
+        #get amount emails with the labels specified
+        msgList = self.service.users().messages().list(userId='me',
+                labelIds = labels, maxResults = amount).execute() 
+        messages = msgList['messages'] #retrieve the messages
+
+        emails = []
+
+        for msg in messages:
+            email = self.service.users().messages().get(userId = 'me', id=msg['id'], format='full').execute()
+            temp_email = {}
+            for head in email['payload']['headers']:
+
+                if (head.get("name") == 'From'):
+                    #print(head.get('value'))
+                    from_info = head.get('value').split(" <")
+                    if (len(from_info) > 1):
+                        from_info[1] = from_info[1][0:-1]
+                    else:
+                        from_info*=2
+                    temp_email['from name'] = from_info[0]
+                    temp_email['from email'] = from_info[1]
+                    
+
+                if(head.get('name') == 'Subject'):
+                    temp_email['subject'] = head.get('value')
+                
+                if (head.get("name") == 'Date'):
+                    temp_date = head.get('value').split(' ')
+                    temp_email['date'] =  temp_date[1] + ' ' + temp_date[2] + ' ' + temp_date[3] 
+
+            temp_email['snippet'] =  email['snippet']
+
+            emails.append(temp_email)
+        
+        return emails 
 
 if __name__ == "__main__":
     email_hand = email_handler()

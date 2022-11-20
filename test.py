@@ -60,11 +60,13 @@ class email_handler:
           body= raw_message
         ).execute()
     
-    def getMessages(self, num):
-        msgList = self.service.users().messages().list(userId='me', labelIds = ['INBOX'], maxResults= num).execute() #list of top 4 inbox emails
-        messages = msgList['messages']
+    def getMessages(self, labels = ['INBOX'], amount = 10):
+        #get amount emails with the labels specified
+        msgList = self.service.users().messages().list(userId='me',
+                labelIds = labels, maxResults = amount).execute() 
+        messages = msgList['messages'] #retrieve the messages
 
-        from_emails = []
+        emails = []
 
         for msg in messages:
             email = self.service.users().messages().get(userId = 'me', id=msg['id'], format='full').execute()
@@ -72,9 +74,13 @@ class email_handler:
             for head in email['payload']['headers']:
                 if (head.get("name") == 'From'):
                     from_info = head.get('value').split(" <")
-                    from_info[1] = from_info[1][0:-1]
+                    if (len(from_info) > 1):
+                        from_info[1] = from_info[1][0:-1]
+                    else:
+                        from_info*=2
                     temp_email['from name'] = from_info[0]
                     temp_email['from email'] = from_info[1]
+                    
 
                 if(head.get('name') == 'Subject'):
                     temp_email['subject'] = head.get('value')
@@ -89,14 +95,14 @@ class email_handler:
             
             temp_email['snippet'] =  snip
 
-            from_emails.append(temp_email)
+            emails.append(temp_email)
         
-        return from_emails    
-        #print(from_emails)
+        return emails    
+        #print(emails)
 
 if __name__ == "__main__":
     email_hand = email_handler()
-    print(email_hand.getMessages(5))
+    print(email_hand.getMessages(amount = 10))
 
         
         
