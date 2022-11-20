@@ -21,34 +21,36 @@ class EntryField(tk.Frame):
         return self.field_entry.get()
 
 class inboxEmail(tk.Frame):
-    def __init__(self, master, message, maxChar = 20):
+    def __init__(self, master, message, maxChar = 30, w = 150):
         super().__init__(master)
         self.master = master
 
         messageKeys = message.keys()
         outMessage = {}
 
+        self.columnconfigure(0, weight=2)
+        self.columnconfigure(1, weight=5)
+        self.columnconfigure(2, weight=1)
+
         for key in ['from name', 'subject', 'snippet', 'date']:
             outMessage[key] = message[key] if (key in messageKeys) else 'N/A'
+            print(repr(outMessage[key]))
 
-        self.fromLabel = tk.Label(master = self, text = outMessage['from name'])
-        self.dateLabel = tk.Label(master = self, text = outMessage['date'])
+        for key in ['subject', 'snippet']:
+            outMessage[key] = outMessage[key] if (len (outMessage[key]) < maxChar) \
+                                                else outMessage[key][0:maxChar] + '...'
 
 
-        self.fromLabel.pack(side = 'left',anchor="w")
+        self.fromLabel = tk.Label(master = self, text = outMessage['from name'], width=int(w/4.5), anchor='w')
+        self.dateLabel = tk.Label(master = self, text = outMessage['date'], width=int(w/6), anchor='e')
+        self.fromLabel.grid(row = 0, column = 0)
+        self.dateLabel.grid(row = 0, column = 2)
 
         self.txtFrame = tk.Frame(master = self)
-        self.txtFrame.pack(side = 'left', anchor="w")
+        self.txtFrame.grid(row = 0, column= 1, sticky= 'WE')
 
-        self.subjectLabel = tk.Label(master = self.txtFrame, text = outMessage['subject'])
-        self.snippetLabel = tk.Label(master = self.txtFrame, text = outMessage['snippet'])
+        self.subjectLabel = tk.Label(master = self.txtFrame, text = outMessage['subject'], anchor='w')
+        self.snippetLabel = tk.Label(master = self.txtFrame, text = outMessage['snippet'], anchor='e')
 
-        self.subjectLabel.grid(row = 0, column = 0)
-        self.snippetLabel.grid(row = 0, column = 1)
-
-        self.dateLabel.pack(side = 'right', anchor="e")
-
-        #self.fromLabel.grid(row = 0, column = 0)
-        #self.subjectLabel.grid(row = 0, column = 1)
-        #self.snippetLabel.grid(row = 0, column = 2)
-        #self.dateLabel.grid(row = 0, column= 3)
+        self.subjectLabel.pack(side=tk.LEFT)
+        self.snippetLabel.pack(side=tk.RIGHT)

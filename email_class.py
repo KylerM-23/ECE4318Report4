@@ -62,6 +62,19 @@ class email_handler:
         self.service.users().messages().send(userId="me",
         body= self.createEmailMessage(message_dict)).execute()
         
+    def cleanTxt(self, txt):
+        cleantxt = ''
+        firstChar = False
+
+        for c in txt:
+            if firstChar:
+                cleantxt += c
+            else:
+                if c != ' ':
+                    cleantxt += c
+                    firstChar = True
+        return cleantxt
+            
     def getMessages(self, labels = ['INBOX'], amount = 10):
         #get amount emails with the labels specified
         msgList = self.service.users().messages().list(userId='me',
@@ -82,7 +95,7 @@ class email_handler:
                         from_info[1] = from_info[1][0:-1]
                     else:
                         from_info*=2
-                    temp_email['from name'] = from_info[0]
+                    temp_email['from name'] = self.cleanTxt(from_info[0].replace('"', ' '))
                     temp_email['from email'] = from_info[1]
                     
 
