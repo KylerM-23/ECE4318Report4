@@ -85,26 +85,36 @@ class email_handler:
 
         for msg in messages:
             email = self.service.users().messages().get(userId = 'me', id=msg['id'], format='full').execute()
-            temp_email = {}
+            temp_email = {
+                'from name': 'Missing Sender', 
+                'from email': 'Missing Email', 
+                'subject': 'Subject N/A', 
+                'date': 'No Date',
+                'snippet': ' '
+            }
             for head in email['payload']['headers']:
-
-                if (head.get("name") == 'From'):
-                    #print(head.get('value'))
-                    from_info = head.get('value').split(" <")
-                    if (len(from_info) > 1):
-                        from_info[1] = from_info[1][0:-1]
+                #print(head.get("name"),':', )
+                name = head.get("name").lower() #sometimes the header is uppercase and lowercase
+                if (name == 'from'):
+                    value = head.get('value')
+                    if '<' in value:
+                        from_info = value.split(" <")
+                        if (len(from_info) > 1):
+                            from_info[1] = from_info[1][0:-1]
+                        else:
+                            from_info*=2
                     else:
-                        from_info*=2
+                        from_info = [value, value]
                     temp_email['from name'] = self.cleanTxt(from_info[0].replace('"', ' '))
                     temp_email['from email'] = from_info[1]
                     
 
-                if(head.get('name') == 'Subject'):
+                elif(name == 'subject'):
                     temp_email['subject'] = head.get('value')
                 
-                if (head.get("name") == 'Date'):
+                elif (name == 'date'):
                     temp_date = head.get('value').split(' ')
-                    temp_email['date'] =  temp_date[1] + ' ' + temp_date[2] + ' ' + temp_date[3] 
+                    temp_email['date'] =  str(int(temp_date[1])) + ' ' + temp_date[2] + ' ' + temp_date[3] 
 
             temp_email['snippet'] =  email['snippet']
 
