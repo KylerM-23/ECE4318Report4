@@ -76,6 +76,7 @@ def add_attachment(message, filename):
         msg.set_payload(fp.read())
         fp.close()
     filename = os.path.basename(filename)
+    
     msg.add_header('Content-Disposition', 'attachment', filename=filename)
     message.attach(msg)
 

@@ -1,7 +1,4 @@
-# Tutorial for Reference: https://www.thepythoncode.com/article/use-gmail-api-in-python#Enabling_Gmail_API
 import os
-import pickle
-import sys
 # Gmail API utils
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -19,13 +16,12 @@ from mimetypes import guess_type as guess_mime_type
 
 class email_handler:
     SCOPES = ['https://mail.google.com/']
-    email = ''
-    working_directory = '.'#; depends on your local computer
+    myemail = ''
     service = None
     
     def __init__(self):
         self.service = self.gmail_authenticate() #get the Gmail API service
-        self.myemail = self.service.users().getProfile(userId = 'me').execute()['emailAddress']
+        self.myemail = self.service.users().getProfile(userId = 'me').execute()['emailAddress'] #get user email
         
     def gmail_authenticate(self):
         creds = None
@@ -41,28 +37,57 @@ class email_handler:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     'credentials.json', self.SCOPES)
                 creds = flow.run_local_server(port=0)
-            # Save the credentials for the next run
+            # Save the credentials for next time
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
                 
-        service = build('gmail', 'v1', credentials=creds)
+        service = build('gmail', 'v1', credentials=creds) #create a gmail service
         return service
 
-    def createEmailMessage(self, message_dict):
-        message = MIMEText(message_dict['body'])
-        message['to'] = message_dict['to']
-        message['from'] = self.myemail
-        message['subject'] = message_dict['subject']
-        message['cc'] = message_dict['cc']
-        message['bcc'] = message_dict['bcc']
+    def add_attachment(self, message, filename):
+        content_type, encoding = guess_mime_type(filename)          #determine file type
+        if content_type is None or encoding is not None:            #default
+            content_type = 'application/octet-stream'
+        main_type, sub_type = content_type.split('/', 1)            #seperate types
+        fp = open(filename, 'rb')                                   #open file and if the file is...
+        if main_type == 'text':
+            msg = MIMEText(fp.read().decode(), _subtype=sub_type)
+        elif main_type == 'image':
+            msg = MIMEImage(fp.read(), _subtype=sub_type)
+        elif main_type == 'audio':
+            msg = MIMEAudio(fp.read(), _subtype=sub_type)
+        else:                                                       #default
+            msg = MIMEBase(main_type, sub_type)
+            msg.set_payload(fp.read())
+        fp.close()                                                  #close file when done
+        filename = os.path.basename(filename)                       #get the file name
+        msg.add_header('Content-Disposition', 'attachment', filename=filename) #add header for attachment
+        message.attach(msg)                                         #attach to message
+
+    def createEmailMessage(self, message_dict, attachments):
+        message = None #placeholder
+        if attachments == None:                         #if no attachments
+            message = MIMEText(message_dict['body'])    #create the message with the body
+        else:                                           #if there are attachments
+            message = MIMEMultipart()                   #set the body as a multiplart file
+            message.attach(MIMEText(message_dict['body'])) #attach body to the email
+            for filename in attachments:                #for each attachment
+                self.add_attachment(message, filename)  #add to the message
+        
+        message['to'] = message_dict['to']              #set the to
+        message['from'] = self.myemail                  #set the from
+        message['subject'] = message_dict['subject']    #set the subject
+        message['cc'] = message_dict['cc']              #set the cc
+        message['bcc'] = message_dict['bcc']            #set the bcc
+
         raw_message = {'raw': urlsafe_b64encode(message.as_bytes()).decode()} #encode message
         return raw_message
     
-    def send_message(self, message_dict):
+    def send_message(self, message_dict, attachments = None):
         self.service.users().messages().send(userId="me",
-        body= self.createEmailMessage(message_dict)).execute()
+        body= self.createEmailMessage(message_dict, attachments)).execute()
         
-    def cleanTxt(self, txt):
+    def cleanTxt(self, txt): #helper function to remove excess whitespace
         cleantxt = ''
         firstChar = False
 
@@ -74,76 +99,111 @@ class email_handler:
                     cleantxt += c
                     firstChar = True
         return cleantxt
-            
-    def getMessages(self, labels = ['INBOX'], amount = 10):
-        #get amount emails with the labels specified
+
+    def get_size_format(self, b, factor=1024, suffix="B"):  #scale the bytes to a common unit
+        for unit in ["", "K", "M", "G", "T", "P", "E", "Z"]:#Byte, Kilo, Mega...
+            if b < factor:
+                return f"{b:.2f}{unit}{suffix}"
+            b /= factor
+        return f"{b:.2f}Y{suffix}"                          #Yottabyte
+
+    def parse_parts(self, service, parts, folder_name, message):
+        """
+        Parses the content of an email partition and save any HTML files into folders (called in read_message())
+        
+        Args:
+            service: comes from this 'service = gmail_authenticate()'
+            parts: comes from 'parts = payload.get("parts")' in read_message()
+            folder_name (path of folder_name)
+            message: an input to read_message(), input was generated by search_messages()
+        """
+        if parts:
+            for part in parts:
+                filename = part.get("filename")
+                mimeType = part.get("mimeType")
+                body = part.get("body")
+                data = body.get("data")
+                file_size = body.get("size")
+                part_headers = part.get("headers")
+                if part.get("parts"):
+                    # recursively call this function when we see that a part
+                    # has parts inside
+                    self.parse_parts(service, part.get("parts"), folder_name, message)
+                if mimeType == "text/plain":
+                    # if the email part is text plain
+                    if data:
+                        text = urlsafe_b64decode(data).decode()
+                        print(text)
+                elif mimeType == "text/html":
+                    # if the email part is an HTML content
+                    # save the HTML file and optionally open it in the browser
+                    if not filename:
+                        filename = "index.html"
+                    filepath = os.path.join(folder_name, filename)
+                    print("Saving HTML to", filepath)
+                    with open(filepath, "wb") as f:
+                        f.write(urlsafe_b64decode(data))
+                else:
+                    # attachment other than a plain text or HTML
+                    for part_header in part_headers:
+                        part_header_name = part_header.get("name")
+                        part_header_value = part_header.get("value")
+                        if part_header_name == "Content-Disposition":
+                            if "attachment" in part_header_value:
+                                # we get the attachment ID 
+                                # and make another request to get the attachment itself
+                                print("Saving the file:", filename, "size:", self.get_size_format(file_size))
+                                attachment_id = body.get("attachmentId")
+                                attachment = service.users().messages() \
+                                            .attachments().get(id=attachment_id, userId='me', messageId=message['id']).execute()
+                                data = attachment.get("data")
+                                filepath = os.path.join(folder_name, filename)
+                                if data:
+                                    with open(filepath, "wb") as f:
+                                        f.write(urlsafe_b64decode(data))
+
+    def getMessages(self, labels = ['INBOX'], amount = 10):                                
         msgList = self.service.users().messages().list(userId='me',
-                labelIds = labels, maxResults = amount).execute() 
-        messages = msgList['messages'] #retrieve the messages
+                labelIds = labels, maxResults = amount).execute() #get amount emails with the labels specified
+        messages = msgList['messages']                          #retrieve the messages
+        emails = []                                             #list for email in dictionary format
 
-        emails = []
-
-        for msg in messages:
+        for msg in messages:                                    #for the messages, get the email information
             email = self.service.users().messages().get(userId = 'me', id=msg['id'], format='full').execute()
-            temp_email = {
+            temp_email = {                                      #default values
                 'from name': 'Missing Sender', 
                 'from email': 'Missing Email', 
                 'subject': 'Subject N/A', 
                 'date': 'No Date',
                 'snippet': ' '
             }
-            for head in email['payload']['headers']:
-                #print(head.get("name"),':', )
-                name = head.get("name").lower() #sometimes the header is uppercase and lowercase
-                if (name == 'from'):
-                    value = head.get('value')
-                    if '<' in value:
-                        from_info = value.split(" <")
-                        if (len(from_info) > 1):
-                            from_info[1] = from_info[1][0:-1]
-                        else:
+            for head in email['payload']['headers']:            #for all headers
+                name = head.get("name").lower()                 #lowercase everything, sometimes gmail returns captial
+                if (name == 'from'):                            #from is in the format Name <name123@gmail.com> or name123@gmail.com
+                    value = head.get('value')                   #get the name and email
+                    if '<' in value:                            #if the name is there
+                        from_info = value.split(" <")           #split into strings to clean up
+                        if (len(from_info) > 1):                #if split into two
+                            from_info[1] = from_info[1][0:-1]   #get the email
+                        else:                                   #both values are the email for the name and email    
                             from_info*=2
                     else:
                         from_info = [value, value]
-                    temp_email['from name'] = self.cleanTxt(from_info[0].replace('"', ' '))
-                    temp_email['from email'] = from_info[1]
-                    
-
-                elif(name == 'subject'):
-                    temp_email['subject'] = head.get('value')
+                    temp_email['from name'] = self.cleanTxt(from_info[0].replace('"', ' ')) #remove extrawhitespace for the name
+                    temp_email['from email'] = from_info[1]     #save the email seperately
+                elif(name == 'subject'):                        #if it is a subject
+                    temp_email['subject'] = head.get('value')   #save it
                 
-                elif (name == 'date'):
-                    temp_date = head.get('value').split(' ')
-                    temp_email['date'] =  str(int(temp_date[1])) + ' ' + temp_date[2] + ' ' + temp_date[3] 
+                elif (name == 'date'):                          #date formatted as Weekday, Month Day Year time timezone
+                    temp_date = head.get('value').split(' ')    #split into components to make Month, Day, Year string
+                    if (temp_date[0] in ['Mon,', 'Tue,', 'Wed,','Thu,','Fri,','Sat,','Sun,']): #if weekday included
+                        temp_email['date'] =  str(int(temp_date[1])) + ' ' + temp_date[2] + ' ' + temp_date[3] #create new string
+                    else:
+                        temp_email['date'] =  str(int(temp_date[0])) + ' ' + temp_date[1] + ' ' + temp_date[2] #create new string
 
-            temp_email['snippet'] =  email['snippet']
-
-            emails.append(temp_email)
-        
-        return emails 
-
-if __name__ == "__main__":
-    email_hand = email_handler()
-    email_message = {
-        'to':'',
-        'subject':'',
-        'body':'',
-        }
-    user_choice = 0
-    while user_choice != '-1':
-        print('-1: Exit\n',
-              '0 : Send Email\n')
-        
-        user_choice = input('What do you want to do?\n')
-        if user_choice == '-1':
-            continue
-        elif user_choice == '0':
-            email_message['to'] = input('What is the email address you are sending an email to?\n')
-            email_message['subject'] = input('What is the subject of this email?\n')
-            email_message['body'] = input('What is the body of this email?\n')
-
-            email_hand.send_message(email_message)
-        
+            temp_email['snippet'] =  email['snippet']           #get email snippet
+            emails.append(temp_email)                           #add to email list
+        return emails                                           #return emails
         
 
 
