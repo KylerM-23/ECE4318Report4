@@ -174,6 +174,7 @@ def clean(text):
 def parse_parts(service, parts, folder_name, message):
     """
     Parses the content of an email partition and save any HTML files into folders (called in read_message())
+    Most of the time, the email message body should be in the 'text' variable in the "text/plain" block
     
     Args:
         service: comes from this 'service = gmail_authenticate()'
@@ -234,6 +235,7 @@ def read_message(service, message):
         - Creates a folder for each email based on the subject
         - Downloads text/html content (if available) and saves it under the folder created as index.html
         - Downloads any file that is attached to the email and saves it in the folder created
+        - Most email informations like dates and subject can be founded here; the email message body is founded in parse_parts()
         
     Args:
         service: comes from this 'service = gmail_authenticate()'
