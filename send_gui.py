@@ -5,16 +5,16 @@ from gui_components import *
 
 class send_GUI(tk.Frame):
     def __init__(self, master, gmail, width =  100):
-        super().__init__(master, width = width)
+        super().__init__(master, width= width)
         self.gmail = gmail                                          #save email service
         self.title = tk.Label(master = self, text="Compose Email")  #title for compose email
         self.attachments = []                                       #list for attachments    
         
         #Create entry objects
-        self.to_entry = EntryField(master = self, field = 'To:', width = width)
-        self.subject_entry = EntryField(master = self, field = 'Subject:', width = width)
-        self.cc_entry = EntryField(master = self, field = 'CC:', width = width)
-        self.bcc_entry = EntryField(master = self, field = 'BCC:', width = width)
+        self.to_entry = EntryField(master = self, field = 'To:')
+        self.subject_entry = EntryField(master = self, field = 'Subject:')
+        self.cc_entry = EntryField(master = self, field = 'CC:')
+        self.bcc_entry = EntryField(master = self, field = 'BCC:')
 
         #create text box for body
         self.body = tk.Text(master = self)

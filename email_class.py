@@ -13,8 +13,8 @@ from email.mime.image import MIMEImage
 from email.mime.audio import MIMEAudio
 from email.mime.base import MIMEBase
 from mimetypes import guess_type as guess_mime_type
-import base64  
-from bs4 import BeautifulSoup
+import base64 
+import re
 
 class email_handler:
     SCOPES = ['https://mail.google.com/']
@@ -214,9 +214,20 @@ class email_handler:
                 data = parts['body']['data']
                 data = data.replace("-","+").replace("_","/")
                 decoded_data = base64.b64decode(data)
-                temp_email['body'] = decoded_data.decode()
+                cleanData = decoded_data.decode()
+                cleanData = re.sub(r'<.+?>', '', cleanData)
+                cleanData = cleanData.replace('\r\n\r\n', '\n')
+                cleanData = cleanData.replace('\u200c', '')
+                temp_email['body'] = cleanData
             except:
                 temp_email['body'] =  email['snippet']
+
+            if (temp_email['snippet'] == ''):
+                bodySize = len(temp_email['body'])
+                if (bodySize > 100):
+                    temp_email['snippet'] = temp_email['body'][0:100]
+                else:
+                    temp_email['snippet'] = temp_email['body'][0:bodySize]   
 
             emails.append(temp_email)                           #add to email list
         return emails                                           #return emails
