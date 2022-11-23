@@ -1,4 +1,5 @@
 import tkinter as tk
+from view_message_gui import *
 
 class EntryField(tk.Frame):
     def __init__(self, master, field, width = 100):
@@ -25,41 +26,50 @@ class EntryField(tk.Frame):
     def getData(self):  #return data
         return self.field_entry.get()
 
-class inboxEmail:
-    def __init__(self, master, row = 0, maxChar = 80, w = 150):
+class inboxEmail(tk.Frame): #individual emails
+    def __init__(self, master, rootGUI, row = 0, maxChar = 80, w = 150):
+        super().__init__(master, width = w)
         self.master = master
         self.maxChar = maxChar #set the max characters
         self.row = row  #save which row the email belongs in
         self.message = None
+        self.grid(row = row, column=0, sticky ='N')
+        
+        self.rootGUI = rootGUI
 
         #create the labels for the information
-        self.fromLabel = tk.Label(master = self.master, width=int(w*.20), anchor = 'w')
-        self.dateLabel = tk.Label(master = self.master, width=int(w*.10), anchor='e')
-        self.subjectLabel = tk.Label(master = self.master, width=int(w*.25), anchor = 'w')
-        self.snippetLabel = tk.Label(master = self.master, width=int(w*.45), anchor = 'w')
+        self.fromLabel = tk.Label(master = self, width=int(w*.20), anchor = 'w')
+        self.dateLabel = tk.Label(master = self, width=int(w*.10), anchor='e')
+        self.subjectLabel = tk.Label(master = self, width=int(w*.25), anchor = 'w')
+        self.snippetLabel = tk.Label(master = self, width=int(w*.45), anchor = 'w')
+
+        self.viewBtn = tk.Button(master=self, text = 'View', command=self.viewMsg)
 
     def build(self): #place elements on the screen
-        self.fromLabel.grid(row = self.row, column = 0)
-        self.subjectLabel.grid(row = self.row, column = 1)
-        self.snippetLabel.grid(row = self.row, column = 2)
-        self.dateLabel.grid(row = self.row, column = 3)
+        self.viewBtn.grid(row = 0, column = 0)
+        self.fromLabel.grid(row = 0, column = 1)
+        self.subjectLabel.grid(row = 0, column = 2)
+        self.snippetLabel.grid(row = 0, column = 3)
+        self.dateLabel.grid(row = 0, column = 4)
+        
         
     def refresh(self, message):
         self.message = message  #save message
-        outMessage = message    #create out messgae
 
         #truncate the subject and snippet if too long
-        outMessage['subject'] = outMessage['subject'] if (len (outMessage['subject']) < self.maxChar//3) \
-                                                else (outMessage['subject'][0:self.maxChar//3] + '...')
-        outMessage['snippet'] = outMessage['snippet'] if (len (outMessage['snippet']) < self.maxChar) \
-                                                else (outMessage['snippet'][0:self.maxChar] + '...')
+        subj = message['subject'] if (len (message['subject']) < self.maxChar//3) \
+                                                else (message['subject'][0:self.maxChar//3] + '...')
+        snip = message['snippet'] if (len (message['snippet']) < self.maxChar) \
+                                                else (message['snippet'][0:self.maxChar] + '...')
 
         #set the text for the labels with the associated text
-        self.fromLabel['text'] = outMessage['from name']
-        self.dateLabel['text'] = outMessage['date']
-        self.subjectLabel['text'] = outMessage['subject']
-        self.snippetLabel['text'] = outMessage['snippet']
-        
+        self.fromLabel['text'] = message['from name']
+        self.dateLabel['text'] = message['date']
+        self.subjectLabel['text'] = subj
+        self.snippetLabel['text'] = snip
+
+    def viewMsg(self):
+        self.rootGUI.updateMessageView(self.message)
 
 class inboxGUI(tk.Frame):
     def __init__(self, master, gmail):
@@ -68,7 +78,10 @@ class inboxGUI(tk.Frame):
         self.gmail = gmail      #save service
         self.inbox_emails = []  #save emails
         self.emailFrame = tk.Frame(master = self) #create and displayframe to store emails
-        self.emailFrame.grid(row = 0, column = 0)
+        self.emailFrame.grid(row = 0, column = 0, sticky='N')
+        self.view_msg_GUI_Frame = view_message_GUI(self, self.gmail)
+        self.view_msg_GUI_Frame.grid(row = 0, column=1, sticky='N', padx=(10, 10))
+        self.view_msg_GUI_Frame.build()
         self.email_amount = 15                    #retrieve a max of 15 emails
 
         #get INBOX emails
@@ -77,7 +90,7 @@ class inboxGUI(tk.Frame):
         
     def build_inbox_mail(self):
         for i in range(len(self.email_list)): #for all emails
-            mail = inboxEmail(master = self.emailFrame, row = i) #create email
+            mail = inboxEmail(master = self.emailFrame, rootGUI=self, row = i) #create email
             self.inbox_emails.append(mail)                       #add to list   
         
         self.refresh_email()#get newest messages
@@ -90,3 +103,6 @@ class inboxGUI(tk.Frame):
         self.email_list = self.gmail.getMessages(labels = ['INBOX'], amount = self.email_amount)
         for i, email_obj in enumerate(self.inbox_emails): #for all emails, refresh them with new info
             email_obj.refresh(self.email_list[i])
+
+    def updateMessageView(self, msg):
+        self.view_msg_GUI_Frame.updateDisplay(msg)

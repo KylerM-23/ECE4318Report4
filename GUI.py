@@ -3,6 +3,7 @@ from email_class import email_handler
 from gui_components import *
 from send_gui import *
 
+
 class emailGUI(tk.Frame):
     gmail = email_handler() #create the email service
     widgets = []
@@ -12,7 +13,8 @@ class emailGUI(tk.Frame):
         self.master = master
         
         self.inbox_GUI_Frame = inboxGUI(self, self.gmail)   #create inbox GUI
-        self.inbox_GUI_Frame.grid(row = 1, column=0, sticky='NSWE', padx=(10, 10))
+        self.inbox_GUI_Frame.grid(row = 1, column=0, sticky='N', padx=(10, 10))
+        
         
         self.send_GUI_Frame = send_GUI(self, self.gmail)    #create send GUI
         
@@ -35,7 +37,7 @@ class emailGUI(tk.Frame):
     def hideSend(self):     #hide the send GUI
         self.send_GUI_Frame.grid_remove() 
         self.send_GUI_Frame.hide_widgets()  #hide the widgets
-        
+
     def destroy(self):
         for w in self.widgets:              #destroy all widgets
             w.destroy()
