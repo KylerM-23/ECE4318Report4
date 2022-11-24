@@ -7,7 +7,7 @@ window_geometry = str(window_width)+'x'+str(window_height)
 class EntryField(tk.Frame):
     def __init__(self, master, field):
         super().__init__(master)
-        self.field_label = tk.Label(master = self, text=field + '\t')       #create label
+        self.field_label = tk.Label(master = self, text=field + '\t')#create label
         self.field_entry = tk.Entry(master = self)   #create entry
     
     def build(self):  #display components
@@ -37,17 +37,19 @@ class ScrollFrame(tk.Frame):
     def __init__(self, parent, w = window_width, h = window_height):
         super().__init__(parent)
         self.canvas = tk.Canvas(self, borderwidth=0, width = w, height= h)          #place canvas on self
-        self.viewPort = tk.Frame(self.canvas, width=w, height = h)                  #place a frame on the canvas, this frame will hold the child widgets 
+        self.viewPort = tk.Frame(self.canvas, width=w, height = h)                  #place a frame on the canvas
         self.vsb = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview) #place a scrollbar on self 
-        self.canvas.configure(yscrollcommand=self.vsb.set)                          #attach scrollbar action to scroll of canvas
+        self.canvas.configure(yscrollcommand=self.vsb.set)                          #set canvas to scroll
 
         self.vsb.pack(side="right", fill="y")                                       #pack scrollbar to right of frame
-        self.canvas.pack(side="left", fill="both", expand=True)                     #pack canvas to left of self and expand to fil
+        self.canvas.pack(side="left", fill="both", expand=True)                     #pack canvas to left and fill
         self.canvas_window = self.canvas.create_window((0,0), window=self.viewPort, #create window sticky to northwest
         anchor="nw", tags="self.viewPort")                                          #add view port frame to canvas
-        self.viewPort.bind("<Configure>", self.ResizeFrame)                       #bind an event whenever the size of the viewPort frame changes.
-        #self.canvas.bind("<Configure>", self.onCanvasConfigure)                       #bind an event whenever the size of the canvas frame changes.
+        self.viewPort.bind("<Configure>", self.ResizeFrame)                         #resize scrollbar when it changes.
         self.ResizeFrame()                                                          #get the initial size
 
-    def ResizeFrame(self, event = None):  #Reset the scroll region to the size of the frame                                           
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))                
+    def resetView(self):                    #move view to the top
+        self.canvas.yview_moveto('0')
+
+    def ResizeFrame(self, event = None):    #Reset the scroll region to the size of the frame   
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))       

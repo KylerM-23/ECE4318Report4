@@ -38,7 +38,7 @@ class emailGUI(tk.Frame):
         self.send_GUI_Frame.build()         #build widgets in it
         
         
-    def hideSend(self):     #hide the send GUI
+    def hideSend(self):                     #hide the send GUI
         self.send_GUI_Frame.grid_remove() 
         self.send_GUI_Frame.hide_widgets()  #hide the widgets
 

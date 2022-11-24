@@ -68,19 +68,19 @@ class email_handler:
 
     def createEmailMessage(self, message_dict, attachments):
         message = None #placeholder
-        if attachments == None:                         #if no attachments
-            message = MIMEText(message_dict['body'])    #create the message with the body
-        else:                                           #if there are attachments
-            message = MIMEMultipart()                   #set the body as a multiplart file
-            message.attach(MIMEText(message_dict['body'])) #attach body to the email
-            for filename in attachments:                #for each attachment
-                self.add_attachment(message, filename)  #add to the message
+        if attachments == None:                             #if no attachments
+            message = MIMEText(message_dict['body'])        #create the message with the body
+        else:                                               #if there are attachments
+            message = MIMEMultipart()                       #set the body as a multiplart file
+            message.attach(MIMEText(message_dict['body']))  #attach body to the email
+            for filename in attachments:                    #for each attachment
+                self.add_attachment(message, filename)      #add to the message
         
-        message['to'] = message_dict['to']              #set the to
-        message['from'] = self.myemail                  #set the from
-        message['subject'] = message_dict['subject']    #set the subject
-        message['cc'] = message_dict['cc']              #set the cc
-        message['bcc'] = message_dict['bcc']            #set the bcc
+        message['to'] = message_dict['to']                  #set the to
+        message['from'] = self.myemail                      #set the from
+        message['subject'] = message_dict['subject']        #set the subject
+        message['cc'] = message_dict['cc']                  #set the cc
+        message['bcc'] = message_dict['bcc']                #set the bcc
 
         raw_message = {'raw': urlsafe_b64encode(message.as_bytes()).decode()} #encode message
         return raw_message
@@ -89,8 +89,8 @@ class email_handler:
         self.service.users().messages().send(userId="me",
         body= self.createEmailMessage(message_dict, attachments)).execute()
         
-    def cleanTxt(self, txt): #helper function to remove excess whitespace
-        cleantxt = ''
+    def cleanTxt(self, txt):                                #helper function to remove
+        cleantxt = ''                                       #excess whitespace
         firstChar = False
 
         for c in txt:
@@ -102,62 +102,57 @@ class email_handler:
                     firstChar = True
         return cleantxt
 
-    def get_size_format(self, b, factor=1024, suffix="B"):  #scale the bytes to a common unit
-        for unit in ["", "K", "M", "G", "T", "P", "E", "Z"]:#Byte, Kilo, Mega...
-            if b < factor:
-                return f"{b:.2f}{unit}{suffix}"
-            b /= factor
-        return f"{b:.2f}Y{suffix}"                          #Yottabyte
-
     def parse_parts(self, parts, folder_name, message):
-        if parts:
+        if parts:                                               #if there are parts
             for part in parts:
-                filename = part.get("filename")
-                mimeType = part.get("mimeType")
-                body = part.get("body")
+                filename = part.get("filename")                 #get info on the 
+                mimeType = part.get("mimeType")                 #part and store 
+                body = part.get("body")                         #into variables
                 data = body.get("data")
-                file_size = body.get("size")
-                part_headers = part.get("headers")
-                if part.get("parts"):
-                    # recursively call this function when we see that a part
-                    # has parts inside
-                    self.parse_parts(part.get("parts"), folder_name, message)
-                if mimeType == "text/plain":
-                    # if the email part is text plain
-                    if data:
-                        text = urlsafe_b64decode(data).decode()
-                        if not filename:
-                            filename = "body.txt"
-                        filepath = os.path.join(folder_name, filename)
-                        with open(filepath, "w") as f:
-                            f.write(text)
+                part_headers = part.get("headers")              #get headers
 
-                elif mimeType == "text/html":
-                    # if the email part is an HTML content
-                    # save the HTML file and optionally open it in the browser
-                    if not filename:
-                        filename = "index.html"
+                if part.get("parts"):       # recursive call when parts are found
+                    self.parse_parts(part.get("parts"), folder_name, message)
+                if mimeType == "text/plain":                    #if the part is txt data
+                    if data:                                    #if data is found
+                        text = urlsafe_b64decode(data).decode() #decode data and save
+                        if not filename:                    
+                            filename = "body.txt"               #default file name
+                        filepath = os.path.join(folder_name, filename)
+                        with open(filepath, "w") as f:          #open file path and 
+                            f.write(text)                       #save the text file
+
+                elif mimeType == "text/html":                   #if data is HTML
+                    if not filename:                        
+                        filename = "index.html"                 #default file name
                     filepath = os.path.join(folder_name, filename)
-                    with open(filepath, "wb") as f:
+                    with open(filepath, "wb") as f:             #open file and save
                         f.write(urlsafe_b64decode(data))
-                else:
-                    # attachment other than a plain text or HTML
-                    for part_header in part_headers:
-                        part_header_name = part_header.get("name")
+                else:                                           #for other files
+                    for part_header in part_headers:            #check all parts
+                        part_header_name = part_header.get("name")  
                         part_header_value = part_header.get("value")
-                        if part_header_name == "Content-Disposition":
-                            if "attachment" in part_header_value:
-                                # we get the attachment ID 
-                                # and make another request to get the attachment itself
-                                print("Saving the file:", filename, "size:", self.get_size_format(file_size))
-                                attachment_id = body.get("attachmentId")
-                                attachment = self.service.users().messages() \
-                                            .attachments().get(id=attachment_id, userId='me', messageId=message['id']).execute()
-                                data = attachment.get("data")
-                                filepath = os.path.join(folder_name, filename)
-                                if data:
-                                    with open(filepath, "wb") as f:
-                                        f.write(urlsafe_b64decode(data))
+                        if part_header_name == "Content-Disposition" and "attachment" in part_header_value:
+                            #get the attachment ID and make a request to get the attachment
+                            attachment_id = body.get("attachmentId")
+                            attachment = self.service.users().messages() \
+                                        .attachments().get(id=attachment_id, userId='me', messageId=message['id']).execute()
+                            data = attachment.get("data")
+                            filepath = os.path.join(folder_name, filename)
+                            if data:
+                                with open(filepath, "wb") as f:     #if data is avaliable, write to a file
+                                    f.write(urlsafe_b64decode(data))
+
+    
+    def parseBody(self, parts):
+        data = parts['body']['data']
+        data = data.replace("-","+").replace("_","/")   #format the data and decode
+        decoded_data = base64.b64decode(data)
+        cleanData = decoded_data.decode()
+        cleanData = re.sub(r'<.+?>', '', cleanData)     #clean the data by removing extra links 
+        cleanData = cleanData.replace('\r\n\r\n', '\n') #and characters
+        cleanData = cleanData.replace('\u200c', '')
+        return cleanData
 
     def getMessages(self, labels = ['INBOX'], amount = 10):                                
         msgList = self.service.users().messages().list(userId='me',
@@ -194,10 +189,10 @@ class email_handler:
                         from_info = [value, value]
                     temp_email['from name'] = self.cleanTxt(from_info[0].replace('"', ' ')) #remove extrawhitespace for the name
                     temp_email['from email'] = from_info[1]     #save the email seperately
-                elif name.lower() == "to":
-                    temp_email['to'] = head.get('value').replace('<', '').replace('>', '')   #save it
-                elif name.lower() == "cc":
-                    temp_email['cc'] = head.get('value').replace('<', '').replace('>', '')  #save it
+                
+                elif name in ["to", "cc"]:
+                    temp_email[name] = head.get('value').replace('<', '').replace('>', '')  #save it and remove <>
+                
                 elif(name == 'subject'):                        #if it is a subject
                     temp_email['subject'] = head.get('value')   #save it
                 
@@ -209,25 +204,18 @@ class email_handler:
                         temp_email['date'] =  str(int(temp_date[0])) + ' ' + temp_date[1] + ' ' + temp_date[2] #create new string
 
             temp_email['snippet'] =  email['snippet']           #get email snippet
-            try:
-                parts = payload.get('parts')[0]
-                data = parts['body']['data']
-                data = data.replace("-","+").replace("_","/")
-                decoded_data = base64.b64decode(data)
-                cleanData = decoded_data.decode()
-                cleanData = re.sub(r'<.+?>', '', cleanData)
-                cleanData = cleanData.replace('\r\n\r\n', '\n')
-                cleanData = cleanData.replace('\u200c', '')
+            
+            try:                                
+                parts = payload.get('parts')[0]                 #get the body data from the payload parts
+                cleanData = self.parseBody(parts)
                 temp_email['body'] = cleanData
             except:
-                temp_email['body'] =  email['snippet']
+                temp_email['body'] =  email['snippet']          #if there is no body, use the snippet
 
-            if (temp_email['snippet'] == ''):
-                bodySize = len(temp_email['body'])
-                if (bodySize > 100):
-                    temp_email['snippet'] = temp_email['body'][0:100]
-                else:
-                    temp_email['snippet'] = temp_email['body'][0:bodySize]   
+            if (temp_email['snippet'] == ''):                   #if there is no snippet
+                bodySize = len(temp_email['body'])              #use the entire body or 
+                snipSize =  bodySize if (bodySize < 100) else 100 #first 100 characters
+                temp_email['snippet'] = temp_email['body'][0:snipSize]   
 
             emails.append(temp_email)                           #add to email list
         return emails                                           #return emails
