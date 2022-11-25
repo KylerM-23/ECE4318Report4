@@ -344,6 +344,25 @@ def delete_messages(service, query):
       }
     ).execute()
 
+
+def delete_all_spam_messages(service):
+    '''
+    Delete all spam email messages (works just like delete_messages() but without any search query)
+    
+    Args:
+        service: comes from this 'service = gmail_authenticate()'
+    '''
+    messages_to_delete = search_messages(service, "is:spam") # select all email messages labeled as spam
+    # it's possible to delete a single message with the delete API, like this:
+    # service.users().messages().delete(userId='me', id=msg['id'])
+    # but it's also possible to delete all the selected messages with one query, batchDelete
+    return service.users().messages().batchDelete(
+      userId='me',
+      body={
+          'ids': [ msg['id'] for msg in messages_to_delete]
+      }
+    ).execute()
+
 if __name__ == "__main__":
     email_source = input('What is the email address you are signing in to?\n')
     our_email = email_source
