@@ -48,8 +48,8 @@ class inboxEmail(tk.Frame): #individual emails
         self.rootGUI.updateMessageView(self.message)    #update GUI
     
     def deleteMsg(self):
-        self.rootGUI.closeMessageView()
-        self.rootGUI.delMessage(self.message)
+        self.rootGUI.closeMessageView()                 #close open msg
+        self.rootGUI.delMessage(self.message)           #delete message
 
 class inboxGUI(tk.Frame):
     def __init__(self, master, gmail, width = window_width//2 +100):
@@ -60,7 +60,7 @@ class inboxGUI(tk.Frame):
         self.emailFrame = ScrollFrame(self, w = width)  #create and displayframe to store emails
         self.emailFrame.grid(row = 0, column = 0, sticky='NSEW')
         self.view_msg_GUI_Frame = view_message_GUI(self, self.gmail)
-        self.email_amount = 20                          #set max num of emails
+        self.email_amount = 10                          #set max num of emails
         self.messageOpen = False                        #status of message window
         self.email_list = self.gmail.getMessages(labels = ['INBOX'], \
             amount = self.email_amount)
