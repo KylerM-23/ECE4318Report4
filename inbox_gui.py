@@ -48,6 +48,7 @@ class inboxEmail(tk.Frame): #individual emails
         self.rootGUI.updateMessageView(self.message)    #update GUI
     
     def deleteMsg(self):
+        self.rootGUI.closeMessageView()
         self.rootGUI.delMessage(self.message)
 
 class inboxGUI(tk.Frame):
