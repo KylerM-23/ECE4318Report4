@@ -221,7 +221,24 @@ class email_handler:
 
             emails.append(temp_email)                           #add to email list
         return emails                                           #return emails
+
+    def delete_message(self, msg):
+        '''
+        delete email message
         
+        Args:
+            msg (dictionary): msg to delete
+        '''
+        return self.service.users().messages().delete(userId='me', id=msg['id']).execute()
+
+    def mark_as_read(self, msg):
+        '''
+        mark email as read
+        Args: msg (dictionary): msg to read
+        '''
+        
+        return self.service.users().messages().modify(userId='me', id = msg['id'],
+            body={ 'removeLabelIds': ['UNREAD']}).execute()
 
 
 

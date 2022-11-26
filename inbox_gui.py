@@ -12,12 +12,13 @@ class inboxEmail(tk.Frame): #individual emails
         self.rootGUI = rootGUI                              #base frame
 
         #create the labels for the information
-        self.fromLabel = tk.Label(master = self, width=int(w*.20), anchor = 'w',justify = 'left')
-        self.dateLabel = tk.Label(master = self, width=int(w*.10), anchor = 'e', justify = 'left')
+        self.fromLabel = tk.Label(master = self, width=int(w*.15), anchor = 'w',justify = 'left')
+        self.dateLabel = tk.Label(master = self, width=int(w*.05), anchor = 'e', justify = 'left')
         self.subjectLabel = tk.Label(master = self, width=int(w*.2), anchor = 'w', justify = 'left')
-        self.snippetLabel = tk.Label(master = self, width=int(w*.2), justify = 'left', anchor = 'w', wraplength=int(w*1.1))
+        self.snippetLabel = tk.Label(master = self, width=int(w*.2), justify = 'left', anchor = 'w', wraplength=int(w*1))
 
         self.viewBtn = tk.Button(master=self, text = 'View', command=self.viewMsg)
+        self.delBtn = tk.Button(master=self, text = 'Delete', command=self.deleteMsg)
 
     def build(self): #place elements on the screen
         self.viewBtn.grid(row = 0, column = 0)
@@ -25,6 +26,8 @@ class inboxEmail(tk.Frame): #individual emails
         self.subjectLabel.grid(row = 0, column = 2)
         self.snippetLabel.grid(row = 0, column = 3)
         self.dateLabel.grid(row = 0, column = 4)
+        self.delBtn.grid(row = 0, column= 5)
+
         
     def refresh(self, message):
         self.message = message  #save message
@@ -43,9 +46,12 @@ class inboxEmail(tk.Frame): #individual emails
 
     def viewMsg(self):
         self.rootGUI.updateMessageView(self.message)    #update GUI
+    
+    def deleteMsg(self):
+        self.rootGUI.delMessage(self.message)
 
 class inboxGUI(tk.Frame):
-    def __init__(self, master, gmail, width = window_width//2):
+    def __init__(self, master, gmail, width = window_width//2 +100):
         super().__init__(master)
         self.master = master
         self.gmail = gmail                              #save service
@@ -76,8 +82,13 @@ class inboxGUI(tk.Frame):
     def updateMessageView(self, msg):
         self.master.hideSend()                          #hide send window
         self.messageOpen = True                         #change status
+        self.gmail.mark_as_read(msg)
         self.view_msg_GUI_Frame.grid(row = 0, column=1, sticky='N', padx=(10, 10))
         self.view_msg_GUI_Frame.updateDisplay(msg)      #place and update GUI
+
+    def delMessage(self, msg):
+        self.gmail.delete_message(msg)
+        self.refresh_email()
         
     def closeMessageView(self): 
         if self.messageOpen:                            #if a message is open                        
