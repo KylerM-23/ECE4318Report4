@@ -143,7 +143,6 @@ class email_handler:
                                 with open(filepath, "wb") as f:     #if data is avaliable, write to a file
                                     f.write(urlsafe_b64decode(data))
 
-    
     def parseBody(self, parts):
         data = parts['body']['data']
         data = data.replace("-","+").replace("_","/")   #format the data and decode
@@ -153,6 +152,32 @@ class email_handler:
         cleanData = cleanData.replace('\r\n\r\n', '\n') #and characters
         cleanData = cleanData.replace('\u200c', '')
         return cleanData
+
+    def parseEmailInfo(self, name, value, email):
+        if (name == 'from'):                            #from is in the format Name <name123@gmail.com> or name123@gmail.com
+            if '<' in value:                            #if the name is there
+                from_info = value.split(" <")           #split into strings to clean up
+                if (len(from_info) > 1):                #if split into two
+                    from_info[1] = from_info[1][0:-1]   #get the email
+                else:                                   #both values are the email for the name and email    
+                    from_info*=2
+            else:
+                from_info = [value, value]
+            email['from name'] = self.cleanTxt(from_info[0].replace('"', ' ')) #remove extra whitespace for the name
+            email['from email'] = from_info[1]     #save the email seperately
+        
+        elif name in ["to", "cc"]:
+            email[name] = value.replace('<', '').replace('>', '')  #save it and remove <>
+        
+        elif(name == 'subject'):                        #if it is a subject
+            email['subject'] = value
+        
+        elif (name == 'date'):                          #date formatted as Weekday, Month Day Year time timezone
+            temp_date = value.split(' ')    #split into components to make Month, Day, Year string
+            if (temp_date[0] in ['Mon,', 'Tue,', 'Wed,','Thu,','Fri,','Sat,','Sun,']): #if weekday included
+                email['date'] =  str(int(temp_date[1])) + ' ' + temp_date[2] + ' ' + temp_date[3] #create new string
+            else:
+                email['date'] =  str(int(temp_date[0])) + ' ' + temp_date[1] + ' ' + temp_date[2] #create new string
 
     def getMessages(self, labels = ['INBOX'], amount = 10):                                
         msgList = self.service.users().messages().list(userId='me',
@@ -177,38 +202,15 @@ class email_handler:
             
             for head in email['payload']['headers']:            #for all headers
                 name = head.get("name").lower()                 #lowercase everything, sometimes gmail returns captial
-                if (name == 'from'):                            #from is in the format Name <name123@gmail.com> or name123@gmail.com
-                    value = head.get('value')                   #get the name and email
-                    if '<' in value:                            #if the name is there
-                        from_info = value.split(" <")           #split into strings to clean up
-                        if (len(from_info) > 1):                #if split into two
-                            from_info[1] = from_info[1][0:-1]   #get the email
-                        else:                                   #both values are the email for the name and email    
-                            from_info*=2
-                    else:
-                        from_info = [value, value]
-                    temp_email['from name'] = self.cleanTxt(from_info[0].replace('"', ' ')) #remove extrawhitespace for the name
-                    temp_email['from email'] = from_info[1]     #save the email seperately
-                
-                elif name in ["to", "cc"]:
-                    temp_email[name] = head.get('value').replace('<', '').replace('>', '')  #save it and remove <>
-                
-                elif(name == 'subject'):                        #if it is a subject
-                    temp_email['subject'] = head.get('value')   #save it
-                
-                elif (name == 'date'):                          #date formatted as Weekday, Month Day Year time timezone
-                    temp_date = head.get('value').split(' ')    #split into components to make Month, Day, Year string
-                    if (temp_date[0] in ['Mon,', 'Tue,', 'Wed,','Thu,','Fri,','Sat,','Sun,']): #if weekday included
-                        temp_email['date'] =  str(int(temp_date[1])) + ' ' + temp_date[2] + ' ' + temp_date[3] #create new string
-                    else:
-                        temp_email['date'] =  str(int(temp_date[0])) + ' ' + temp_date[1] + ' ' + temp_date[2] #create new string
+                value = head.get('value')                       #get data for header
+                self.parseEmailInfo(name, value, temp_email)    #parse data based on header type
+
 
             temp_email['snippet'] =  email['snippet']           #get email snippet
             
             try:                                
                 parts = payload.get('parts')[0]                 #get the body data from the payload parts
-                cleanData = self.parseBody(parts)
-                temp_email['body'] = cleanData
+                temp_email['body'] = self.parseBody(parts)      #parse body data
             except:
                 temp_email['body'] =  email['snippet']          #if there is no body, use the snippet
 

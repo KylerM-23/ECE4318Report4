@@ -1,4 +1,5 @@
 import tkinter as tk
+import platform
 
 window_width = 1280
 window_height = 720
@@ -46,10 +47,38 @@ class ScrollFrame(tk.Frame):
         self.canvas_window = self.canvas.create_window((0,0), window=self.viewPort, #create window sticky to northwest
         anchor="nw", tags="self.viewPort")                                          #add view port frame to canvas
         self.viewPort.bind("<Configure>", self.ResizeFrame)                         #resize scrollbar when it changes.
+        self.viewPort.bind('<Enter>', self.onEnter)                                 #bind scroll when the cursor enters the frame
+        self.viewPort.bind('<Leave>', self.onLeave)                                 #unbind scroll when the cursor leaves the frame
         self.ResizeFrame()                                                          #get the initial size
+
+    def onMouseWheel(self, event):                                                  # cross platform scroll wheel event
+        if platform.system() == 'Windows':
+            self.canvas.yview_scroll(int(-1* (event.delta/120)), "units")
+        elif platform.system() == 'Darwin':
+            self.canvas.yview_scroll(int(-1 * event.delta), "units")
+        else:
+            if event.num == 4:
+                self.canvas.yview_scroll( -1, "units" )
+            elif event.num == 5:
+                self.canvas.yview_scroll( 1, "units" )
+    
+    def onEnter(self, event):                                                      #bind scroll when the cursor enters the frame
+        if platform.system() == 'Linux':                                           #wheel scroll for linux
+            self.canvas.bind_all("<Button-4>", self.onMouseWheel)
+            self.canvas.bind_all("<Button-5>", self.onMouseWheel)
+        else:                                                                      #wheel scroll for othe platforms
+            self.canvas.bind_all("<MouseWheel>", self.onMouseWheel)
+    
+    def onLeave(self, event):                                                      #unbind scroll when the cursor leaves the frame
+        if platform.system() == 'Linux':
+            self.canvas.unbind_all("<Button-4>")
+            self.canvas.unbind_all("<Button-5>")
+        else:
+            self.canvas.unbind_all("<MouseWheel>")
 
     def resetView(self):                    #move view to the top
         self.canvas.yview_moveto('0')
 
     def ResizeFrame(self, event = None):    #Reset the scroll region to the size of the frame   
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))       
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))    
+

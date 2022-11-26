@@ -41,8 +41,9 @@ class view_message_GUI(tk.Frame):
         
     def download(self):
         savedir = filedialog.askdirectory()                                         #get folder to save to
-        self.gmail.parse_parts(self.message['parts'], savedir,self.message['id'])   #download attachments
-        messagebox.showinfo("Attachments", "Download Complete")                     #Status Complete
+        if savedir:
+            self.gmail.parse_parts(self.message['parts'], savedir,self.message)   #download attachments
+            messagebox.showinfo("Attachments", "Download Complete")                     #Status Complete
 
     def cleartxt(self):                 #clear values to default
         self.subjectLabel['text'] =''
