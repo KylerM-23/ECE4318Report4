@@ -49,7 +49,7 @@ class view_message_GUI(tk.Frame):
         self.subjectLabel['text'] =''
         self.fromLabel['text'] = ''
         self.toLabel['text'] = ''
-        self.ccLabel['text'] = 'N/A'
+        self.ccLabel['text'] = ''
         self.bodyLabel['text'] = ''
 
     def updateDisplay(self, message):   #update GUI data and reset view
@@ -60,8 +60,11 @@ class view_message_GUI(tk.Frame):
         self.subjectLabel['text'] = message['subject']
         self.fromLabel['text'] = 'From: ' + message['from name']
         self.toLabel['text'] = 'To: ' + message['to']
-        if (self.message['cc'] != 'N/A'):
+        if (self.message['cc'] != 'N/A' and self.message['cc'] != ''):
+            self.ccLabel.grid(row = 3, column = 0, sticky='W')
             self.ccLabel['text'] = 'CC: ' + message['cc']
+        else:
+            self.ccLabel.grid_remove()
         self.bodyLabel['text'] = message['body']
         self.msgFrame.resetView() 
 

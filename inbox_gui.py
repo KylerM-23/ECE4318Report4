@@ -12,10 +12,10 @@ class inboxEmail(tk.Frame): #individual emails
         self.rootGUI = rootGUI                              #base frame
 
         #create the labels for the information
-        self.fromLabel = tk.Label(master = self, width=int(w*.15), anchor = 'w',justify = 'left')
-        self.dateLabel = tk.Label(master = self, width=int(w*.05), anchor = 'e', justify = 'left')
-        self.subjectLabel = tk.Label(master = self, width=int(w*.2), anchor = 'w', justify = 'left')
-        self.snippetLabel = tk.Label(master = self, width=int(w*.2), justify = 'left', anchor = 'w', wraplength=int(w*1))
+        self.fromLabel = tk.Label(master = self, width=int(w*.13), anchor = 'w',justify = 'left')
+        self.dateLabel = tk.Label(master = self, width=int(w*.09), anchor = 'e', justify = 'left')
+        self.subjectLabel = tk.Label(master = self, width=int(w*.18), anchor = 'w', justify = 'left')
+        self.snippetLabel = tk.Label(master = self, width=int(w*.18), justify = 'left', anchor = 'w', wraplength=int(w*1))
 
         self.viewBtn = tk.Button(master=self, text = 'View', command=self.viewMsg)
         self.delBtn = tk.Button(master=self, text = 'Delete', command=self.deleteMsg)
